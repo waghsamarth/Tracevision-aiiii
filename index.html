@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TraceVision AI 2.0</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div id="boot" role="status" aria-live="polite">
+  <div class="boot-box"><h1>TraceVision AI</h1><ul id="boot-list"></ul></div>
+</div>
+<canvas id="grid-bg" aria-hidden="true"></canvas>
+<div class="app">
+  <nav class="side" aria-label="Main">
+    <div class="brand"><span class="logo" aria-hidden="true"></span><div><b>TraceVision AI</b><small>Camera monitoring &amp; digital safety</small></div></div>
+    <button data-view="dashboard" class="active">Dashboard</button>
+    <button data-view="live">Live Camera</button>
+    <button data-view="events">Security Events</button>
+    <button data-view="incidents">Incidents</button>
+    <button data-view="cameras">Camera Management</button>
+    <button data-view="history">Event History</button>
+    <button data-view="audit">Audit Log</button>
+    <button data-view="settings">Settings</button>
+    <p class="privacy">Video is processed on this computer only. Frames are never saved or uploaded.</p>
+  </nav>
+  <div class="main">
+    <header class="top">
+      <h2 id="view-title">Dashboard</h2>
+      <div class="pills">
+        <span class="pill" id="pill-backend" title="Backend health check">Backend: checking</span>
+        <span class="pill" id="pill-camera" title="Camera state from the backend">Camera: -</span>
+        <span class="pill" id="pill-scan" title="Motion scanning">Scan: off</span>
+      </div>
+    </header>
+    <div id="toast" role="status" aria-live="polite"></div>
+
+    <section id="view-dashboard" class="view">
+      <div class="cards" id="cards"></div>
+      <div class="two">
+        <div class="panel"><h3>Camera</h3><div id="dash-camera"></div></div>
+        <div class="panel"><h3>Latest events</h3><div id="dash-events"></div></div>
+      </div>
+    </section>
+
+    <section id="view-live" class="view" hidden>
+      <div class="panel">
+        <div class="controls">
+          <button class="btn primary" id="btn-start">Start camera</button>
+          <button class="btn" id="btn-stop">Stop camera</button>
+          <label class="switch"><input type="checkbox" id="scan-toggle"> Motion scanning</label>
+          <label class="inline">Sensitivity <input type="range" min="1" max="10" id="live-sens"><output id="live-sens-out"></output></label>
+        </div>
+        <div class="video" id="video">
+          <img id="feed" alt="Live webcam feed" hidden>
+          <div class="empty" id="video-empty"></div>
+          <div class="ov" id="overlay" hidden><i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+            <span class="live">LIVE</span><span class="stamp" id="stamp"></span><span class="scanline"></span><span class="mflag" id="mflag">MOTION CANDIDATE</span></div>
+        </div>
+        <p class="hint" id="live-msg"></p>
+      </div>
+      <div class="panel"><h3>Demo events</h3>
+        <p class="hint">These add clearly labelled DEMO events for rehearsing the review workflow. They are not detections.</p>
+        <div class="controls">
+          <button class="btn demo" data-demo="camera_disconnected">Demo: camera disconnected</button>
+          <button class="btn demo" data-demo="tampering">Demo: tampering</button>
+          <button class="btn demo" data-demo="restricted_zone">Demo: restricted zone</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-events" class="view" hidden>
+      <div class="panel"><div class="filters" data-list="events">
+        <input type="search" placeholder="Search notes or ID" aria-label="Search events" class="f-q">
+        <select class="f-source" aria-label="Source"><option value="">All sources</option><option value="motion">Real motion</option><option value="camera">Camera errors</option><option value="simulated">Demo</option></select>
+        <select class="f-status" aria-label="Status"><option value="">Any open status</option><option>new</option><option>acknowledged</option><option>reviewed</option><option>verified</option></select>
+        <select class="f-sev" aria-label="Severity"><option value="">Any severity</option><option>low</option><option>medium</option><option>high</option></select>
+      </div><div id="list-events"></div></div>
+    </section>
+
+    <section id="view-incidents" class="view" hidden>
+      <div class="panel"><div class="filters">
+        <input type="search" id="inc-q" placeholder="Search incidents" aria-label="Search incidents">
+        <select id="inc-status" aria-label="Incident status"><option value="">All statuses</option><option>open</option><option>investigating</option><option>resolved</option><option>closed</option></select>
+        <button class="btn primary" id="inc-new">New incident</button>
+      </div><div id="list-incidents"></div></div>
+    </section>
+
+    <section id="view-cameras" class="view" hidden><div class="panel" id="cam-mgmt"></div></section>
+
+    <section id="view-history" class="view" hidden>
+      <div class="panel"><div class="filters" data-list="history">
+        <input type="search" placeholder="Search notes or ID" aria-label="Search history" class="f-q">
+        <select class="f-source" aria-label="Source"><option value="">All sources</option><option value="motion">Real motion</option><option value="camera">Camera errors</option><option value="simulated">Demo</option></select>
+        <select class="f-status" aria-label="Status"><option value="">Any status</option><option>new</option><option>acknowledged</option><option>reviewed</option><option>verified</option><option>dismissed</option><option>closed</option></select>
+        <select class="f-sev" aria-label="Severity"><option value="">Any severity</option><option>low</option><option>medium</option><option>high</option></select>
+        <a class="btn" href="/api/export/events.csv" download>Export CSV</a>
+      </div><div id="list-history"></div></div>
+    </section>
+
+    <section id="view-audit" class="view" hidden>
+      <div class="panel"><div class="controls"><button class="btn primary" id="btn-verify">Verify audit chain</button><span id="verify-out" class="hint" role="status"></span></div>
+      <div id="list-audit"></div></div>
+    </section>
+
+    <section id="view-settings" class="view" hidden>
+      <div class="panel narrow"><form id="settings-form" novalidate>
+        <label>Motion sensitivity (1 low, 10 high)<input type="number" name="sensitivity" min="1" max="10" required></label>
+        <label>Cooldown between motion events (seconds)<input type="number" name="cooldown" min="1" max="300" required></label>
+        <label>Camera index (0 is usually the built-in webcam)<input type="number" name="camera_index" min="0" max="9" required></label>
+        <button class="btn primary" type="submit">Save settings</button><p class="hint" id="settings-msg" role="status"></p>
+      </form>
+      <p class="hint">Changing the camera index applies the next time you start the camera.</p></div>
+    </section>
+  </div>
+</div>
+
+<aside id="drawer" class="drawer" aria-hidden="true" role="dialog" aria-labelledby="drawer-title">
+  <div class="drawer-head"><h3 id="drawer-title">Incident</h3><button class="btn" id="drawer-close" aria-label="Close panel">Close</button></div>
+  <div id="drawer-body"></div>
+</aside>
+<script src="/static/js/app.js"></script>
+</body>
+</html>
